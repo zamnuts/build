@@ -56,12 +56,12 @@ install_common()
 
 	# change time zone data
 	echo $TZDATA > $SDCARD/etc/timezone
-	chroot $SDCARD /bin/bash -c "dpkg-reconfigure -f noninteractive tzdata >/dev/null 2>&1"
+	sdchroot $SDCARD /bin/bash -c "dpkg-reconfigure -f noninteractive tzdata >/dev/null 2>&1"
 
 	# set root password
-	chroot $SDCARD /bin/bash -c "(echo $ROOTPWD;echo $ROOTPWD;) | passwd root >/dev/null 2>&1"
+	sdchroot $SDCARD /bin/bash -c "(echo $ROOTPWD;echo $ROOTPWD;) | passwd root >/dev/null 2>&1"
 	# force change root password at first login
-	chroot $SDCARD /bin/bash -c "chage -d 0 root"
+	sdchroot $SDCARD /bin/bash -c "chage -d 0 root"
 
 	# display welcome message at first root login
 	touch $SDCARD/root/.not_logged_in_yet
@@ -138,7 +138,7 @@ install_common()
 	# freeze armbian packages
 	if [[ $BSPFREEZE == yes ]]; then
 		display_alert "Freezing Armbian packages" "$BOARD" "info"
-		chroot $SDCARD /bin/bash -c "apt-mark hold ${CHOSEN_KERNEL} ${CHOSEN_KERNEL/image/headers} \
+		sdchroot $SDCARD /bin/bash -c "apt-mark hold ${CHOSEN_KERNEL} ${CHOSEN_KERNEL/image/headers} \
 			linux-u-boot-${BOARD}-${BRANCH} ${CHOSEN_KERNEL/image/dtb}" >> $DEST/debug/install.log 2>&1
 	fi
 
@@ -150,7 +150,7 @@ install_common()
 	[[ $(type -t family_tweaks) == function ]] && family_tweaks
 
 	# enable additional services
-	chroot $SDCARD /bin/bash -c "systemctl --no-reload enable firstrun.service resize2fs.service armhwinfo.service log2ram.service firstrun-config.service >/dev/null 2>&1"
+	sdchroot $SDCARD /bin/bash -c "systemctl --no-reload enable firstrun.service resize2fs.service armhwinfo.service log2ram.service firstrun-config.service >/dev/null 2>&1"
 
 	# copy "first run automated config, optional user configured"
  	cp $SRC/packages/bsp/armbian_first_run.txt.template $SDCARD/boot/armbian_first_run.txt.template
@@ -175,7 +175,7 @@ install_common()
 	sed '/.*$KLogPermitNonKernelFacility.*/,// s/.*/#&/' -i $SDCARD/etc/rsyslog.conf
 
 	# enable getty on serial console
-	chroot $SDCARD /bin/bash -c "systemctl --no-reload enable serial-getty@$SERIALCON.service >/dev/null 2>&1"
+	sdchroot $SDCARD /bin/bash -c "systemctl --no-reload enable serial-getty@$SERIALCON.service >/dev/null 2>&1"
 
 	[[ $LINUXFAMILY == sun*i ]] && mkdir -p $SDCARD/boot/overlay-user
 
@@ -227,7 +227,7 @@ install_distribution_specific()
 
 		# disable not working on unneeded services
 		# ureadahead needs kernel tracing options that AFAIK are present only in mainline
-		chroot $SDCARD /bin/bash -c "systemctl --no-reload mask ondemand.service ureadahead.service setserial.service etc-setserial.service >/dev/null 2>&1"
+		sdchroot $SDCARD /bin/bash -c "systemctl --no-reload mask ondemand.service ureadahead.service setserial.service etc-setserial.service >/dev/null 2>&1"
 		;;
 
 	stretch)
@@ -293,10 +293,10 @@ post_debootstrap_tweaks()
 {
 	# remove service start blockers and QEMU binary
 	rm -f $SDCARD/sbin/initctl $SDCARD/sbin/start-stop-daemon
-	chroot $SDCARD /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/initctl"
-	chroot $SDCARD /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
+	sdchroot $SDCARD /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/initctl"
+	sdchroot $SDCARD /bin/bash -c "dpkg-divert --quiet --local --rename --remove /sbin/start-stop-daemon"
 
-	chroot $SDCARD /bin/bash -c 'echo "resolvconf resolvconf/linkify-resolvconf boolean true" | debconf-set-selections'
+	sdchroot $SDCARD /bin/bash -c 'echo "resolvconf resolvconf/linkify-resolvconf boolean true" | debconf-set-selections'
 	mkdir -p $SDCARD/var/lib/resolvconf/linkified
 	:> $SDCARD/var/lib/resolvconf/linkified
 

@@ -45,7 +45,7 @@ create_chroot()
 	[[ ! -f $target_dir/usr/share/keyrings/debian-archive-keyring.gpg ]] && \
 		mkdir -p  $target_dir/usr/share/keyrings/ && \
 		cp /usr/share/keyrings/debian-archive-keyring.gpg $target_dir/usr/share/keyrings/
-	chroot $target_dir /bin/bash -c "/debootstrap/debootstrap --second-stage"
+	sdchroot $target_dir /bin/bash -c "/debootstrap/debootstrap --second-stage"
 	[[ $? -ne 0 || ! -f $target_dir/bin/bash ]] && exit_with_error "Create chroot second stage failed"
 	create_sources_list "$release" "$target_dir"
 	[[ $NO_APT_CACHER != yes ]] && \
@@ -55,7 +55,7 @@ create_chroot()
 	APT::Install-Suggests "0";
 	EOF
 	[[ -f $target_dir/etc/locale.gen ]] && sed -i "s/^# en_US.UTF-8/en_US.UTF-8/" $target_dir/etc/locale.gen
-	chroot $target_dir /bin/bash -c "locale-gen; update-locale LANG=en_US:en LC_ALL=en_US.UTF-8"
+	sdchroot $target_dir /bin/bash -c "locale-gen; update-locale LANG=en_US:en LC_ALL=en_US.UTF-8"
 	printf '#!/bin/sh\nexit 101' > $target_dir/usr/sbin/policy-rc.d
 	chmod 755 $target_dir/usr/sbin/policy-rc.d
 	rm $target_dir/etc/resolv.conf 2>/dev/null
@@ -67,7 +67,7 @@ create_chroot()
 		rm -rf $target_dir/var/lock 2>/dev/null
 		mkdir -p $target_dir/var/lock
 	fi
-	chroot $target_dir /bin/bash -c "/usr/sbin/update-ccache-symlinks"
+	sdchroot $target_dir /bin/bash -c "/usr/sbin/update-ccache-symlinks"
 	touch $target_dir/root/.debootstrap-complete
 	display_alert "Debootstrap complete" "$release/$arch" "info"
 } #############################################################################
@@ -278,7 +278,7 @@ chroot_installpackages_local()
 		 -gpg-key="925644A6" -passphrase="testkey1234" -component=temp -distribution=$RELEASE publish repo temp
 	aptly -config=$conf -listen=":8189" serve &
 	local aptly_pid=$!
-	cp $SRC/packages/extras-buildpkgs/buildpkg.key $SDCARD/tmp/buildpkg.key
+	cp $SRC/packages/extras-buildpkgs/buildpkg.key $SDCARD/root/buildpkg.key
 	cat <<-'EOF' > $SDCARD/etc/apt/preferences.d/90-armbian-temp.pref
 	Package: *
 	Pin: origin "localhost"
@@ -306,9 +306,9 @@ chroot_installpackages()
 		unset package_install_target package_checkinstall
 	done
 	[[ $NO_APT_CACHER != yes ]] && local apt_extra="-o Acquire::http::Proxy=\"http://${APT_PROXY_ADDR:-localhost:3142}\" -o Acquire::http::Proxy::localhost=\"DIRECT\""
-	cat <<-EOF > $SDCARD/tmp/install.sh
+	cat <<-EOF > $SDCARD/root/install.sh
 	#!/bin/bash
-	[[ "$remote_only" != yes ]] && apt-key add /tmp/buildpkg.key
+	[[ $remote_only != yes ]] && apt-key add /root/buildpkg.key
 	apt-get $apt_extra -q update
 	# uncomment to debug
 	# /bin/bash
@@ -320,12 +320,12 @@ chroot_installpackages()
 	#fi
 	apt-get -q $apt_extra --show-progress -o DPKG::Progress-Fancy=1 install -y $install_list
 	apt-get clean
-	[[ "$remote_only" != yes ]] && apt-key del "925644A6"
+	[[ $remote_only != yes ]] && apt-key del "925644A6"
 	rm /etc/apt/sources.list.d/armbian-temp.list 2>/dev/null
 	rm /etc/apt/preferences.d/90-armbian-temp.pref 2>/dev/null
-	rm /tmp/buildpkg.key 2>/dev/null
+	rm /root/buildpkg.key 2>/dev/null
 	rm -- "\$0"
 	EOF
-	chmod +x $SDCARD/tmp/install.sh
-	chroot $SDCARD /bin/bash -c "/tmp/install.sh"
+	chmod +x $SDCARD/root/install.sh
+	sdchroot $SDCARD /bin/bash -c "/root/install.sh"
 } #############################################################################

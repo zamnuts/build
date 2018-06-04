@@ -19,7 +19,7 @@ compile_tools()
 	rm -f $tmpdir/brcm/{brcm_patchram_plus,brcm_bt_reset} $tmpdir/brcm/*.o
 
 	display_alert "... compiling" "bluetooth utils" "info"
-	chroot $SDCARD /bin/bash -c "cd /root/tools/brcm; make $CTHREADS" >> $DEST/debug/tools-build.log 2>&1
+	sdchroot $SDCARD /bin/bash -c "cd /root/tools/brcm; make $CTHREADS" >> $DEST/debug/tools-build.log 2>&1
 	if [[ $? -ne 0 || ! -f $tmpdir/brcm/brcm_bt_reset ]]; then
 		cd $SRC/cache
 		rm -rf $tmpdir

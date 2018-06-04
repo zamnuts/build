@@ -8,8 +8,8 @@
 # https://github.com/armbian/build/
 
 # Functions:
-# mount_chroot
-# umount_chroot
+#
+# sdchroot
 # unmount_on_exit
 # check_loop_device
 # install_external_applications
@@ -18,38 +18,19 @@
 # install_deb_chroot
 
 
-# mount_chroot <target>
-#
-# helper to reduce code duplication
-#
-mount_chroot()
+sdchroot()
 {
-	local target=$1
-	mount -t proc chproc $target/proc
-	mount -t sysfs chsys $target/sys
-	mount -t devtmpfs chdev $target/dev || mount --bind /dev $target/dev
-	mount -t devpts chpts $target/dev/pts
-} #############################################################################
-
-# umount_chroot <target>
-#
-# helper to reduce code duplication
-#
-umount_chroot()
-{
-	local target=$1
-	umount -l $target/dev/pts >/dev/null 2>&1
-	umount -l $target/dev >/dev/null 2>&1
-	umount -l $target/proc >/dev/null 2>&1
-	umount -l $target/sys >/dev/null 2>&1
-} #############################################################################
+	local dir=$1
+	shift
+	# --bind here is to fool useless makedev postinstall script
+	systemd-nspawn -q -a --bind /dev/zero:/dev/.devfsd -D "$dir" "$@"
+}
 
 # unmount_on_exit
 #
 unmount_on_exit()
 {
 	trap - INT TERM EXIT
-	umount_chroot "$SDCARD/"
 	umount -l $SDCARD/tmp >/dev/null 2>&1
 	umount -l $SDCARD >/dev/null 2>&1
 	umount -l $MOUNT/boot >/dev/null 2>&1
@@ -107,13 +88,10 @@ customize_image()
 	[[ -f $SRC/userpatches/customize-image-host.sh ]] && source $SRC/userpatches/customize-image-host.sh
 	cp $SRC/userpatches/customize-image.sh $SDCARD/tmp/customize-image.sh
 	chmod +x $SDCARD/tmp/customize-image.sh
-	mkdir -p $SDCARD/tmp/overlay
-	# util-linux >= 2.27 required
-	mount -o bind,ro $SRC/userpatches/overlay $SDCARD/tmp/overlay
 	display_alert "Calling image customization script" "customize-image.sh" "info"
-	chroot $SDCARD /bin/bash -c "/tmp/customize-image.sh $RELEASE $LINUXFAMILY $BOARD $BUILD_DESKTOP"
-	umount $SDCARD/tmp/overlay
-	mountpoint -q $SDCARD/tmp/overlay || rm -r $SDCARD/tmp/overlay
+	mkdir -p $SDCARD/tmp/overlay
+	sdchroot $SDCARD --bind $SRC/userpatches/overlay:$SDCARD/tmp/overlay /bin/bash -c "/tmp/customize-image.sh $RELEASE $LINUXFAMILY $BOARD $BUILD_DESKTOP"
+	rm -r $SDCARD/tmp/overlay
 } #############################################################################
 
 install_deb_chroot()
@@ -122,6 +100,6 @@ install_deb_chroot()
 	local name=$(basename $package)
 	cp $package $SDCARD/root/$name
 	display_alert "Installing" "$name"
-	chroot $SDCARD /bin/bash -c "dpkg -i /root/$name" >> $DEST/debug/install.log 2>&1
+	sdchroot $SDCARD /bin/bash -c "dpkg -i /root/$name" >> $DEST/debug/install.log 2>&1
 	rm -f $SDCARD/root/$name
 }
