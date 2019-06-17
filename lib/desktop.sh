@@ -116,9 +116,8 @@ create_desktop_package ()
 
 desktop_postinstall ()
 {
-	# stage: install display manager
-	[[ -f "${SDCARD}"/etc/default/nodm ]] && sed "s/NODM_ENABLED=\(.*\)/NODM_ENABLED=false/g" -i "${SDCARD}"/etc/default/nodm
-	[[ -d "${SDCARD}"/etc/lightdm ]] && chroot "${SDCARD}" /bin/bash -c "systemctl --no-reload disable lightdm.service >/dev/null 2>&1"
+	# disable display manager for first run
+	chroot "${SDCARD}" /bin/bash -c "systemctl --no-reload disable lightdm.service >/dev/null 2>&1"
 
 	# Compile Turbo Frame buffer for sunxi
 	if [[ $LINUXFAMILY == sun* && $BRANCH == default ]]; then
