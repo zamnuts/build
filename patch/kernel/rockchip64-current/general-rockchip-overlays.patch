@@ -12,12 +12,13 @@ diff --git a/arch/arm64/boot/dts/rockchip/overlay/Makefile b/arch/arm64/boot/dts
 index e69de29..576e190 100644
 --- /dev/null
 +++ b/arch/arm64/boot/dts/rockchip/overlay/Makefile
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,23 @@
 +# SPDX-License-Identifier: GPL-2.0
 +dtbo-$(CONFIG_ARCH_ROCKCHIP) += \
 +	rockchip-i2c7.dtbo \
 +	rockchip-i2c8.dtbo \
 +	rockchip-pcie-gen2.dtbo \
++	rockchip-rk3399-overclock.dtbo \
 +	rockchip-spi-jedec-nor.dtbo \
 +	rockchip-spi-spidev.dtbo \
 +	rockchip-uart4.dtbo \
@@ -39,7 +40,7 @@ diff --git a/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays b/arc
 index e69de29..9512445 100644
 --- /dev/null
 +++ b/arch/arm64/boot/dts/rockchip/overlay/README.rockchip-overlays
-@@ -0,0 +1,106 @@
+@@ -0,0 +1,112 @@
 +This document describes overlays provided in the kernel packages
 +For generic Armbian overlays documentation please see
 +https://docs.armbian.com/User-Guide_Allwinner_overlays/
@@ -70,6 +71,12 @@ index e69de29..9512445 100644
 +
 +Enables PCIe Gen2 link speed on RK3399.
 +WARNING! Not officially supported by Rockchip!!!
++
++### rk3399-overclock
++
++Overclocks RK3399 CPU clusters to the following frequencies/voltages:
++big: 2.0GHz @ 1.3V
++LITTLE: 1.5GHz @ 1.2V
 +
 +### spi-jedec-nor
 +
@@ -247,6 +254,40 @@ index 0000000..54bc844
 +            status = "okay";
 +        };
 +    };
++};
+diff --git a/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3399-overclock.dts b/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3399-overclock.dts
+new file mode 100644
+index 0000000..54bc844
+--- /dev/null
++++ b/arch/arm64/boot/dts/rockchip/overlay/rockchip-rk3399-overclock.dts
+@@ -0,0 +1,28 @@
++/dts-v1/;
++/plugin/;
++
++/ {
++	compatible = "rockchip,rk3399";
++
++	fragment@0 {
++		target = <&cluster0_opp>;
++
++		__overlay__ {
++			opp06 {
++				opp-hz = /bits/ 64 <1512000000>;
++				opp-microvolt = <1200000>;
++			};
++		};
++	};
++
++        fragment@1 {
++                target = <&cluster1_opp>;
++
++                __overlay__ {
++                        opp08 {
++                                opp-hz = /bits/ 64 <2016000000>;
++                                opp-microvolt = <1300000>;
++                        };
++                };
++        };
 +};
 diff --git a/arch/arm64/boot/dts/rockchip/overlay/rockchip-pcie-gen2.dts b/arch/arm64/boot/dts/rockchip/overlay/rockchip-pcie-gen2.dts
 new file mode 100644
